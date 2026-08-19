@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>국민취업지원제도 자가진단 — SBS ACADEMY AIX</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap">
+<style>
+:root {
+  --black: #000000;
+  --ink: #0B0B0B;
+  --paper: #FFFFFF;
+  --g700: #2F2F2F;
+  --g500: #5C5C5C;
+  --g300: #949494;
+  --g200: #D9D9D9;
+  --g100: #ECECEC;
+  --g50: #F7F7F7;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  background: var(--paper); color: var(--ink);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  font-size: 16px; font-weight: 400; line-height: 1.7;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+:focus-visible { outline: 1px solid var(--black); outline-offset: 5px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+.num { font-variant-numeric: tabular-nums; }
+/* 대문자 소형 라벨: 자간을 크게 벌려 절제된 인상을 준다 */
+.micro {
+ 
+  font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
+}
+
+
+/* ---------- 지면 구성 ---------- */
+.shell { min-height: 100vh; display: grid; grid-template-columns: 38% 1fr; }
+
+/* 좌측 검정 패널: 표제와 목차가 늘 고정되어 있다 */
+.rail { background: var(--black); color: var(--paper); position: relative; }
+.rail::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 1px; background: #1E1E1E; }
+.rail-in { position: sticky; top: 0; height: 100vh; padding: 54px 44px 44px; display: flex; flex-direction: column; }
+
+.mark { font-size: 11px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--paper); }
+.mark span { display: block; margin-top: 7px; color: #9A9A9A; letter-spacing: 0.2em; }
+
+.rail-title { margin-top: 64px; font-size: 26px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.45; color: var(--paper); }
+.rail-title em {
+  display: block; font-style: normal; margin-top: 10px;
+  font-size: 14px; font-weight: 400; letter-spacing: -0.01em; color: #ABABAB;
+}
+
+/* 목차: 지금 어디쯤 왔는지 늘 보인다 */
+.index { list-style: none; margin-top: auto; padding: 0; }
+.index li {
+  display: flex; align-items: baseline; gap: 14px; padding: 8px 0;
+  font-size: 11.5px; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase; color: #6E6E6E;
+  transition: color .3s ease;
+}
+.index li i { font-style: normal; font-size: 10.5px; letter-spacing: 0.08em; min-width: 22px; }
+.index li b { font-weight: 400; }
+.index li.done { color: #9E9E9E; }
+.index li.now { color: var(--paper); }
+.index li.now i { color: var(--paper); }
+.index li.now::after { content: ''; flex: 1; height: 1px; background: #2E2E2E; margin-left: 4px; }
+
+.rail-foot { margin-top: 34px; padding-top: 24px; border-top: 1px solid #262626; font-size: 12px; font-weight: 400; line-height: 1.95; color: #8E8E8E; letter-spacing: -0.005em; }
+
+/* 우측 지면 */
+.panel { background: var(--paper); padding: 54px 60px 48px; display: flex; flex-direction: column; min-width: 0; }
+.panel-top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; min-height: 18px; }
+.count { font-size: 11.5px; font-weight: 500; letter-spacing: 0.14em; color: var(--g500); }
+.back {
+  font-size: 11.5px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--g500);
+  padding: 0; display: none;
+}
+.back.on { display: block; }
+.back:hover { color: var(--black); }
+
+.progress { height: 1px; background: var(--g100); margin: 20px 0 0; }
+.progress i { display: block; height: 1px; background: var(--black); width: 0; transition: width .5s cubic-bezier(.22,.9,.26,1); }
+
+.stage { flex: 1; padding-top: 74px; max-width: 680px; width: 100%; }
+
+/* 문항 본문: 참조표가 있으면 두 칸으로 나눈다 */
+.qbody { margin-top: 46px; }
+.qbody .choices { margin-top: 0; }
+@media (min-width: 1180px) {
+  .qbody.with-ref { display: grid; grid-template-columns: 1fr 214px; gap: 0 44px; align-items: start; }
+}
+
+.ref { margin-top: 34px; }
+.ref-head { padding-bottom: 14px; border-bottom: 1px solid var(--black); }
+.ref-kick { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g500); }
+.ref-title { display: block; margin-top: 8px; font-size: 14.5px; font-weight: 700; letter-spacing: -0.025em; color: var(--black); }
+.ref table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+.ref th {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--g500); padding: 11px 0 9px; text-align: left;
+  border-bottom: 1px solid var(--g100);
+}
+.ref td {
+  font-size: 13px; font-weight: 400; color: var(--g700);
+  padding: 10px 0; border-bottom: 1px solid var(--g100); letter-spacing: -0.01em;
+}
+.ref th.r, .ref td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.ref td.r { font-size: 13.5px; }
+.ref tr.on td { color: var(--black); font-weight: 700; }
+.ref tr.on td:first-child { position: relative; }
+.ref tr.on td:first-child::before { content: ''; position: absolute; left: -12px; top: 50%; width: 6px; height: 1px; background: var(--black); }
+.ref-foot { margin-top: 14px; font-size: 12.5px; font-weight: 400; line-height: 1.8; color: var(--g500); letter-spacing: -0.01em; }
+
+/* ---------- 표지 ---------- */
+.cover { animation: enter .6s cubic-bezier(.22,.9,.26,1); display: flex; flex-direction: column; height: 100%; }
+.cover .kicker { font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--g500); }
+.cover h1 { margin-top: 28px; font-size: 40px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.32; color: var(--black); }
+.cover h1 em { font-style: normal; font-weight: 900; }
+.cover .lede { margin-top: 26px; font-size: 15.5px; font-weight: 400; color: var(--g500); line-height: 1.85; letter-spacing: -0.015em; }
+.cover .facts { margin-top: 46px; border-top: 1px solid var(--black); }
+.cover .fact { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding: 15px 0; border-bottom: 1px solid var(--g100); }
+.cover .fact dt { font-size: 11.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--g500); }
+.cover .fact dd { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+.cover .go { margin-top: 46px; }
+
+/* ---------- 문항 ---------- */
+.step { animation: enter .44s cubic-bezier(.22,.9,.26,1); }
+@keyframes enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.eyebrow { display: flex; align-items: baseline; gap: 14px; color: var(--g500); font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.eyebrow .no {
+  font-size: 40px; font-weight: 300;
+  letter-spacing: -0.02em; color: var(--black); line-height: .82;
+}
+.ask {
+  font-size: 27px; font-weight: 700; letter-spacing: -0.03em;
+  line-height: 1.45; margin: 24px 0 0; color: var(--black);
+}
+.ask b, .ask strong { font-weight: 700; }
+.helper { font-size: 14.5px; font-weight: 400; color: var(--g500); margin-top: 14px; letter-spacing: -0.015em; line-height: 1.7; }
+
+.choices { margin-top: 46px; border-top: 1px solid var(--black); }
+/* 고르는 순간 검정으로 반전되는 것이 이 화면의 성격을 정한다 */
+.choice {
+  width: 100%; text-align: left; padding: 22px 18px;
+  border-bottom: 1px solid var(--g100);
+  display: flex; align-items: center; gap: 18px;
+  transition: background .22s cubic-bezier(.22,.9,.26,1), color .22s;
+  background: var(--paper); color: var(--ink);
+}
+.choice:hover { background: var(--g50); }
+.choice.on { background: var(--black); color: var(--paper); border-bottom-color: var(--black); }
+.choice .body { flex: 1; min-width: 0; }
+.choice .lab { font-size: 17px; font-weight: 500; letter-spacing: -0.025em; }
+.choice.on .lab { font-weight: 500; }
+.choice .note {
+  display: block;
+  font-size: 13px; font-weight: 400; letter-spacing: -0.01em;
+  color: var(--g500); margin-top: 7px; line-height: 1.6;
+}
+/* 점수 표기는 영문 라벨 톤을 유지한다 */
+.choice .note.pt {
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+.choice.on .note { color: #B4B4B4; }
+.choice .mark { flex: 0 0 auto; width: 9px; height: 9px; border: 1px solid var(--g300); border-radius: 50%; transition: all .22s; }
+.choice:hover .mark { border-color: var(--g500); }
+.choice.on .mark { border-color: var(--paper); background: var(--paper); }
+
+/* ---------- 결과 ---------- */
+.result { animation: enter .5s cubic-bezier(.22,.9,.26,1); }
+
+.verdict { padding: 30px 0 44px; text-align: center; background: var(--paper); }
+.verdict.ok { background: var(--black); padding: 60px 34px 52px; }
+.verdict .score {
+  font-size: 108px; font-weight: 200;
+  line-height: .86; letter-spacing: -0.06em; color: var(--black); font-variant-numeric: tabular-nums;
+}
+.verdict .score span {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; margin-left: 12px; vertical-align: 34px; color: var(--g500);
+}
+.verdict .head { font-size: 19px; font-weight: 700; letter-spacing: -0.03em; margin-top: 28px; color: var(--black); }
+.verdict .why { font-size: 14px; font-weight: 400; color: var(--g500); margin-top: 14px; line-height: 1.85; max-width: 30em; margin-left: auto; margin-right: auto; }
+.verdict.ok .score { color: var(--paper); }
+.verdict.ok .score span { color: var(--g300); }
+.verdict.ok .head { color: var(--paper); }
+.verdict.ok .why { color: #B4B4B4; }
+
+.gauge { margin: 34px 0 0; }
+.gauge .track { height: 1px; background: var(--g100); position: relative; }
+.gauge .fill { height: 1px; background: var(--black); transition: width .8s cubic-bezier(.22,.9,.26,1); }
+.gauge .pin { position: absolute; top: -6px; bottom: -6px; width: 1px; background: var(--black); }
+.gauge .cap {
+  display: flex; justify-content: space-between; margin-top: 14px;
+  font-size: 11.5px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--g500);
+}
+
+.lines { margin-top: 54px; }
+.lines h3 {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--g500); padding-bottom: 16px; border-bottom: 1px solid var(--black);
+}
+.line { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding: 19px 0; border-bottom: 1px solid var(--g100); }
+.line .k { font-size: 15.5px; font-weight: 500; letter-spacing: -0.025em; }
+.line .k small {
+  display: block; font-size: 13px;
+  letter-spacing: -0.01em; color: var(--g500); font-weight: 400; margin-top: 6px;
+}
+.line .v { font-size: 26px; font-weight: 300; letter-spacing: -0.03em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.line.sum { border-bottom: none; border-top: 1px solid var(--black); margin-top: 6px; padding-top: 24px; }
+.line.sum .k { font-size: 16px; font-weight: 700; }
+.line.sum .v { font-size: 38px; }
+
+/* 조건을 갖췄을 때 나오는 접수 독려 */
+.urge { margin-top: 54px; background: var(--black); color: var(--paper); padding: 44px 34px 38px; }
+.urge .kick { font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #9A9A9A; }
+.urge .slogan { margin-top: 20px; font-size: 26px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.45; color: var(--paper); }
+.urge .slogan b { font-weight: 700; }
+.urge .say { margin-top: 20px; font-size: 14.5px; font-weight: 400; line-height: 1.95; color: #B4B4B4; letter-spacing: -0.01em; }
+.urge .say b { color: var(--paper); font-weight: 700; }
+.urge .dl { margin-top: 30px; }
+.urge .dl-lab { display: block; font-size: 13px; font-weight: 500; letter-spacing: -0.01em; color: #ABABAB; }
+.urge .dl-date { display: block; margin-top: 10px; font-size: 40px; font-weight: 300; letter-spacing: -0.02em; color: var(--paper); line-height: 1.1; }
+.urge .docs { margin-top: 32px; padding-top: 24px; border-top: 1px solid #262626; }
+.urge .docs-lab { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: #ABABAB; }
+.urge .docs-body { display: block; margin-top: 12px; font-size: 16px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.7; color: var(--paper); }
+.urge .docs-due { display: flex; align-items: baseline; gap: 12px; margin-top: 16px; }
+.urge .docs-due dt { font-size: 13px; font-weight: 500; color: #ABABAB; }
+.urge .docs-due dd { font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; color: var(--paper); }
+@media (max-width: 430px) {
+  .urge { padding: 34px 22px 30px; }
+  .urge .slogan { font-size: 23px; }
+  .urge .dl-date { font-size: 33px; }
+  .urge .docs-body { font-size: 14px; }
+}
+
+/* 미달일 때만 나오는 보완 안내 */
+.guide { margin-top: 54px; }
+.guide-head { padding-bottom: 16px; border-bottom: 1px solid var(--black); }
+.guide-head .kick { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g500); }
+.guide-head .ttl { display: block; margin-top: 9px; font-size: 17px; font-weight: 700; letter-spacing: -0.03em; }
+.guide-item { padding: 22px 0; border-bottom: 1px solid var(--g100); }
+.guide-item .row { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }
+.guide-item .no { font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--g300); }
+.guide-item .name { flex: 1; font-size: 16px; font-weight: 700; letter-spacing: -0.03em; margin-left: 12px; }
+.guide-item .lost { font-size: 14px; font-weight: 500; color: var(--g500); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.guide-item p { margin-top: 11px; margin-left: 34px; font-size: 14px; font-weight: 400; line-height: 1.9; color: var(--g700); letter-spacing: -0.015em; }
+.guide-item p + p { margin-top: 9px; }
+.guide-item .warn { color: var(--black); }
+.guide-note { margin-top: 22px; padding: 22px 24px; background: var(--g50); font-size: 13.5px; font-weight: 400; line-height: 1.9; color: var(--g700); letter-spacing: -0.015em; }
+.guide-note b { font-weight: 700; color: var(--black); }
+
+.namebox { margin-top: 54px; }
+.namebox .head { padding-bottom: 16px; border-bottom: 1px solid var(--black); }
+.namebox .head .kick { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g500); }
+.namebox .head .ttl { display: block; margin-top: 9px; font-size: 17px; font-weight: 700; letter-spacing: -0.03em; color: var(--black); }
+.namebox .head .sub { display: block; margin-top: 9px; font-size: 13.5px; font-weight: 400; color: var(--g500); line-height: 1.8; letter-spacing: -0.015em; }
+.namebox .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; margin-top: 10px; }
+.namebox .fld2 { padding-top: 20px; }
+@media (max-width: 620px) { .namebox .fields { grid-template-columns: 1fr; gap: 0; } }
+.namebox label {
+  display: block; font-size: 13px; font-weight: 700;
+  letter-spacing: -0.01em; color: var(--g500); margin-bottom: 10px;
+}
+.namebox input {
+  width: 100%; padding: 12px 0; background: transparent;
+  border: none; border-bottom: 1px solid var(--g200);
+  font-size: 18px; font-family: inherit; font-weight: 500; letter-spacing: -0.02em;
+  color: var(--black); outline: none; transition: border-color .22s;
+}
+.namebox input::placeholder { color: var(--g300); font-size: 16px; font-weight: 400; }
+.namebox input:focus { border-bottom-color: var(--black); }
+
+.acts { display: flex; flex-direction: column; gap: 0; margin-top: 48px; border-top: 1px solid var(--black); }
+.act {
+  padding: 20px; font-size: 15px; font-weight: 700;
+  letter-spacing: -0.01em; color: var(--black);
+  border-bottom: 1px solid var(--g100); background: var(--paper); transition: background .22s, color .22s;
+}
+.act:hover { background: var(--black); color: var(--paper); }
+.act.solid { background: var(--black); color: var(--paper); border-bottom-color: var(--black); }
+.act.solid:hover { background: var(--g700); }
+.act:disabled { color: var(--g300); cursor: not-allowed; }
+.act:disabled:hover { background: var(--paper); color: var(--g300); }
+.act.quiet { border-bottom: none; color: var(--g500); font-size: 13.5px; font-weight: 500; padding: 18px; }
+.act.quiet:hover { background: var(--paper); color: var(--black); }
+
+.fine { margin-top: 40px; font-size: 12.5px; font-weight: 400; color: var(--g500); line-height: 1.95; letter-spacing: -0.01em; }
+
+/* ---------- 직원 도구 ---------- */
+.staffbar { margin-top: auto; padding-top: 64px; display: flex; gap: 24px; align-items: baseline; }
+.staffbar button { font-size: 12.5px; font-weight: 500; letter-spacing: -0.01em; color: var(--g300); }
+.staffbar button:hover { color: var(--black); }
+.staffbar .me { font-size: 12px; color: var(--g300); margin-right: auto; letter-spacing: -0.01em; }
+
+.veil { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: none; align-items: flex-end; justify-content: center; z-index: 500; }
+.veil.on { display: flex; }
+.sheet { background: var(--paper); width: 100%; max-width: 620px; max-height: 88vh; display: flex; flex-direction: column; animation: up .34s cubic-bezier(.22,.9,.26,1); }
+@keyframes up { from { transform: translateY(30px); opacity: .3; } to { transform: none; opacity: 1; } }
+.sheet > header { padding: 34px 34px 20px; display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--black); }
+.sheet > header h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.035em; }
+.sheet .x { font-size: 13px; font-weight: 500; color: var(--g500); letter-spacing: -0.01em; }
+.sheet .x:hover { color: var(--black); }
+.sheet .in { padding: 30px 34px 14px; overflow-y: auto; }
+.sheet .out { padding: 0; display: flex; border-top: 1px solid var(--black); }
+.sheet .out .act { flex: 1; border-bottom: none; }
+.sheet .out .act + .act { border-left: 1px solid var(--g100); }
+
+/* 신청 직전 확인 팝업 */
+.cf-lead { font-size: 14.5px; font-weight: 400; color: var(--g700); line-height: 1.8; letter-spacing: -0.015em; margin-bottom: 22px; }
+.cf-list { border-top: 1px solid var(--black); }
+.cf-row { display: flex; justify-content: space-between; align-items: baseline; gap: 18px; padding: 15px 0; border-bottom: 1px solid var(--g100); }
+.cf-row dt { font-size: 13px; font-weight: 500; color: var(--g500); letter-spacing: -0.01em; }
+.cf-row dd { font-size: 15.5px; font-weight: 700; letter-spacing: -0.02em; text-align: right; }
+.cf-row.big dd { font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.cf-note { margin-top: 20px; padding: 18px 20px; background: var(--g50); font-size: 13px; font-weight: 400; line-height: 1.8; color: var(--g700); letter-spacing: -0.015em; }
+.cf-note b { font-weight: 700; color: var(--black); }
+
+.fld { margin-bottom: 30px; }
+.fld label { display: block; font-size: 13px; font-weight: 700; letter-spacing: -0.01em; color: var(--g500); margin-bottom: 10px; }
+.fld input { width: 100%; padding: 11px 0; background: transparent; border: none; border-bottom: 1px solid var(--g200); font-size: 17px; font-family: inherit; font-weight: 500; outline: none; color: var(--black); }
+.fld input:focus { border-bottom-color: var(--black); }
+.fld .tip { font-size: 13px; font-weight: 400; color: var(--g500); margin-top: 12px; line-height: 1.8; letter-spacing: -0.01em; }
+.fld .err { font-size: 13px; color: var(--black); margin-top: 12px; min-height: 18px; font-weight: 500; }
+
+.mrow { display: grid; grid-template-columns: 48px 1fr; gap: 16px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--g100); }
+.mrow span { font-size: 13px; font-weight: 500; color: var(--g500); letter-spacing: -0.01em; }
+.mrow input { padding: 5px 0; background: transparent; border: none; border-bottom: 1px solid transparent; font-size: 16px; font-weight: 300; font-variant-numeric: tabular-nums; outline: none; width: 100%; text-align: right; color: var(--black); }
+.mrow input:focus { border-bottom-color: var(--black); }
+
+.rec { display: flex; justify-content: space-between; align-items: baseline; gap: 18px; padding: 19px 0; border-bottom: 1px solid var(--g100); }
+.rec .who { font-size: 16px; font-weight: 700; letter-spacing: -0.03em; }
+.rec .who small { display: block; font-size: 12.5px; color: var(--g500); font-weight: 400; margin-top: 6px; letter-spacing: -0.01em; }
+.rec .sc { text-align: right; font-size: 26px; font-weight: 200; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rec .sc small { display: block; font-size: 12px; font-weight: 700; color: var(--g500); margin-top: 4px; letter-spacing: -0.01em; }
+.blank { padding: 60px 0; text-align: center; color: var(--g300); font-size: 14px; font-weight: 400; }
+
+.toast { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); background: var(--black); color: var(--paper); padding: 16px 28px; font-size: 14px; font-weight: 500; letter-spacing: -0.01em; z-index: 900; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.toast.on { opacity: 1; }
+
+/* ---------- 인쇄 ---------- */
+#sheetPrint { display: none; }
+@media print {
+  @page { size: A4 portrait; margin: 22mm; }
+  .shell, .veil, .toast { display: none !important; }
+  body { background: #fff; }
+  #sheetPrint { display: block; font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+  #sheetPrint .ph { font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #000; }
+  #sheetPrint h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.035em; margin-top: 12px; }
+  #sheetPrint .meta { font-size: 11px; font-weight: 400; color: #5C5C5C; margin: 10px 0 32px; padding-bottom: 16px; border-bottom: 1px solid #000; }
+  #sheetPrint table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-weight: 400; }
+  #sheetPrint th, #sheetPrint td { border-bottom: 1px solid #ECECEC; padding: 12px 2px; text-align: left; }
+  #sheetPrint th { font-size: 10.5px; letter-spacing: 0.02em; color: #5C5C5C; font-weight: 700; border-bottom: 1px solid #000; }
+  #sheetPrint td.r, #sheetPrint th.r { text-align: right; font-variant-numeric: tabular-nums; }
+  #sheetPrint tr.sum td { font-size: 17px; font-weight: 700; border-top: 1px solid #000; border-bottom: none; padding-top: 18px; }
+  #sheetPrint .verdictLine { margin-top: 36px; font-size: 17px; font-weight: 700; letter-spacing: -0.03em; }
+  #sheetPrint .fine { margin-top: 16px; font-size: 10.5px; font-weight: 400; color: #5C5C5C; line-height: 1.85; }
+}
+
+@media (min-width: 660px) { .veil { align-items: center; } }
+
+@media (max-width: 1000px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail-in { position: static; height: auto; padding: 34px 34px 30px; }
+  .rail-title { margin-top: 34px; font-size: 23px; }
+  .rail-title em { margin-top: 8px; }
+  .index { display: none; }
+  .ref { margin-top: 40px; }
+  .rail-foot { margin-top: 26px; padding-top: 18px; }
+  .panel { padding: 30px 34px 44px; }
+  .stage { padding-top: 46px; max-width: none; }
+  .cover h1 { font-size: 33px; }
+}
+@media (max-width: 430px) {
+  .rail-in { padding: 28px 22px 24px; }
+  .panel { padding: 24px 22px 40px; }
+  .ask { font-size: 24px; }
+  .eyebrow .no { font-size: 34px; }
+  .verdict { padding: 46px 22px 40px; }
+  .verdict .score { font-size: 84px; }
+  .choice { padding: 19px 12px; }
+  .cover h1 { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell" id="shell">
+
+  <aside class="rail">
+    <div class="rail-in">
+      <div class="mark">SBS Academy AIX<span>Hongdae</span></div>
+
+      <div class="rail-title">
+        국민취업지원제도<em>선발형 수급자격 진단</em>
+      </div>
+
+      <ol class="index" id="indexList"></ol>
+
+      <div class="rail-foot">
+        「국민취업지원제도 운영규정」 별표 3 기준<br>
+        상담 참고용 · 최종 자격은 고용센터 심사로 결정
+      </div>
+    </div>
+  </aside>
+
+  <main class="panel">
+    <div class="panel-top">
+      <button class="back" id="backBtn" onclick="goBack()">Back</button>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+
+    <div class="stage" id="stage"></div>
+
+    <div class="staffbar">
+      <span class="me" id="me"></span>
+      <button id="staffBtn" onclick="openLogin()">직원 로그인</button>
+      <button id="recBtn" onclick="openRecords()" style="display:none;">기록</button>
+      <button id="cfgBtn" onclick="openConfig()" style="display:none;">기준 설정</button>
+    </div>
+  </main>
+</div>
+
+<div class="veil" id="loginVeil">
+  <div class="sheet">
+    <header><h3>직원 로그인</h3><button class="x" onclick="closeVeil('loginVeil')">닫기</button></header>
+    <div class="in">
+      <div class="fld"><label for="lgEmail">이메일</label><input type="email" id="lgEmail" autocomplete="username" placeholder="name@sbs-hongdae.local"></div>
+      <div class="fld"><label for="lgPw">비밀번호</label><input type="password" id="lgPw" autocomplete="current-password"><div class="err" id="lgErr"></div></div>
+    </div>
+    <div class="out"><button class="act" onclick="closeVeil('loginVeil')">닫기</button><button class="act solid" id="lgBtn" onclick="doLogin()">로그인</button></div>
+  </div>
+</div>
+
+<div class="veil" id="confirmVeil">
+  <div class="sheet">
+    <header><h3>사전접수 확인</h3><button class="x" onclick="closeVeil('confirmVeil')">닫기</button></header>
+    <div class="in" id="confirmBody"></div>
+    <div class="out">
+      <button class="act" onclick="closeVeil('confirmVeil')">다시 확인</button>
+      <button class="act solid" id="confirmBtn">신청 확정</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="cfgVeil">
+  <div class="sheet">
+    <header><h3>기준 설정</h3><button class="x" onclick="closeVeil('cfgVeil')">닫기</button></header>
+    <div class="in">
+      <div class="fld">
+        <label for="cfgCut">가능 판정 기준 점수</label>
+        <input type="number" id="cfgCut" min="0" max="200" placeholder="비워 두면 점수만 보여 줍니다">
+        <div class="tip">선발형 커트라인은 고용노동부가 정하며 공개되지 않습니다. 지점에서 쓰실 값을 넣으면 그 점수부터 가능으로 표시합니다.</div>
+      </div>
+      <div class="fld">
+        <label for="cfgYear">기준 연도</label>
+        <input type="text" id="cfgYear" maxlength="12" placeholder="2026년도">
+      </div>
+      <div class="fld">
+        <label>가구원 수별 기준 중위소득 100% (원)</label>
+        <div class="tip" style="margin:0 0 10px;">40·60·80·120% 는 이 금액에서 계산합니다. 쓰지 않는 줄은 비워 두세요.</div>
+        <div id="cfgRows"></div>
+      </div>
+    </div>
+    <div class="out"><button class="act" onclick="closeVeil('cfgVeil')">닫기</button><button class="act solid" onclick="saveConfig()">저장</button></div>
+  </div>
+</div>
+
+<div class="veil" id="recVeil">
+  <div class="sheet">
+    <header><h3>진단 기록</h3><button class="x" onclick="closeVeil('recVeil')">닫기</button></header>
+    <div class="in" id="recBody"></div>
+    <div class="out"><button class="act" onclick="closeVeil('recVeil')">닫기</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="sheetPrint"></div>
+
+<script>
+/* 시안 미리보기 스위치.
+   true 면 로그인·서버 연결 없이 화면만 바로 보여 줍니다.
+   Firestore 등록을 마친 뒤 false 로 바꾸면 저장과 직원 기능이 살아납니다. */
+const PREVIEW = true;
+
+// 미리보기에서 기준선까지 보이도록 넣어 둔 임시 점수입니다. 실제 기준이 아닙니다.
+const PREVIEW_CUTOFF = 80;
+
+let db = null, auth = null;
+if (!PREVIEW) {
+  try {
+    firebase.initializeApp({
+      apiKey: "AIzaSyB8qZIVzINN5BGSNd6ojqshNC9RXh7jqKU",
+      authDomain: "cash-eabc1.firebaseapp.com",
+      projectId: "cash-eabc1",
+      storageBucket: "cash-eabc1.firebasestorage.app",
+      messagingSenderId: "8436628517",
+      appId: "1:8436628517:web:3a072098e57c02397353cc"
+    });
+    db = firebase.firestore();
+    auth = firebase.auth();
+  } catch (e) {
+    console.warn('Firebase 연결에 실패해 화면만 표시합니다', e);
+  }
+}
+
+/* ============ 별표 3 점수 기준 ============ */
+const INCOME_BANDS = [
+  { max: 0.40, pct: '40% 이하',        base: 40,   youth: 50 },
+  { max: 0.50, pct: '40~50%',          base: 30,   youth: 45 },
+  { max: 0.60, pct: '50~60%',          base: 20,   youth: 45 },
+  { max: 0.80, pct: '60~80%',          base: null, youth: 40 },
+  { max: 1.00, pct: '80~100%',         base: null, youth: 35 },
+  { max: 1.20, pct: '100~120%',        base: null, youth: 30 },
+];
+const ASSET_BANDS = [
+  { max: 100000000, base: 30, youth: 30 },
+  { max: 250000000, base: 22, youth: 22 },
+  { max: Infinity,  base: 14, youth: 14 },
+];
+const WORK_BANDS = [
+  { id: 'w60', lab: '60일(480시간) 이상', base: 30, youth: 20 },
+  { id: 'w30', lab: '30일(240시간) 이상 60일 미만', base: 22, youth: 12 },
+  { id: 'w00', lab: '30일(240시간) 미만', base: 14, youth: 4 },
+];
+const DUP_BANDS = [
+  { id: 'none', lab: '받은 적 없어요', pt: 0 },
+  { id: 'y1',   lab: '1년 이내에 받았어요', pt: -10 },
+  { id: 'y2',   lab: '1년 넘고 2년 이내에 받았어요', pt: -5 },
+];
+const CHILD_PT = 5;
+const ASSET_CAP = { base: 400000000, youth: 500000000 };
+
+const DEFAULT_CONFIG = {
+  cutoff: null, year: '2026년도',
+  median: { 1: 2564238, 2: 4199292, 3: 5359036, 4: 6494738, 5: 7556719, 6: 8555952 },
+};
+let CONFIG = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let CONFIG_REV = 0;
+let STAFF = null;
+
+const A = {};   // 답변
+let idx = 0;    // 현재 문항
+let started = false;  // 표지를 지났는지
+
+/* ============ 도구 ============ */
+function esc(v) {
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmt(n) { return Math.round(Number(n) || 0).toLocaleString('ko-KR'); }
+function digits(v) { const d = String(v || '').replace(/[^0-9]/g, ''); return d === '' ? '' : d; }
+// 12345678 → "1,234만원", 250000000 → "2억 5,000만원"
+function money(n) {
+  n = Math.round(Number(n) || 0);
+  if (n === 0) return '0원';
+  const eok = Math.floor(n / 100000000);
+  const man = Math.round((n % 100000000) / 10000);
+  let out = '';
+  if (eok) out += fmt(eok) + '억 ';
+  if (man) out += fmt(man) + '만';
+  return (out.trim() || fmt(n)) + '원';
+}
+function toast(m) {
+  const t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2600);
+}
+function openVeil(id) { document.getElementById(id).classList.add('on'); }
+function closeVeil(id) { document.getElementById(id).classList.remove('on'); }
+function medianFor(n) { const v = Number(CONFIG.median[n]); return v > 0 ? v : null; }
+function sizes() { return Object.keys(CONFIG.median).map(Number).filter(medianFor).sort((a,b) => a-b); }
+const track = () => (A.youth ? 'youth' : 'base');
+
+/* ============ 선택지 만들기 ============ */
+// 같은 점수가 이어지는 구간은 하나로 합쳐 보여 준다
+function incomeChoices() {
+  const t = track(), med = medianFor(A.household);
+  if (!med) return [];   // 가구원 수를 아직 고르지 않은 상태
+  const usable = INCOME_BANDS.filter(b => b[t] !== null);
+  const merged = [];
+  usable.forEach(b => {
+    const last = merged[merged.length - 1];
+    if (last && last.pt === b[t]) { last.max = b.max; last.pct = last.pct.split('~')[0] + '~' + b.pct.split('~').pop(); }
+    else merged.push({ max: b.max, pt: b[t], pct: b.pct });
+  });
+  const out = [];
+  let lo = 0;
+  merged.forEach(m => {
+    const hi = Math.round(med * m.max);
+    out.push({
+      id: 'i' + Math.round(m.max * 100), pt: m.pt, max: m.max,
+      lab: lo === 0 ? `${fmt(hi)}원 이하` : `${fmt(lo + 1)}원 ~ ${fmt(hi)}원`,
+      note: `중위소득 ${m.pct}`,
+    });
+    lo = hi;
+  });
+  out.push({ id: 'iover', pt: null, over: true, lab: `${fmt(lo + 1)}원 이상`, note: '선발형 소득 요건을 넘습니다' });
+  return out;
+}
+function assetChoices() {
+  const t = track(), cap = ASSET_CAP[t];
+  const out = [];
+  let lo = 0;
+  ASSET_BANDS.forEach((b, i) => {
+    const hi = b.max === Infinity ? cap : b.max;
+    out.push({
+      id: 'a' + i, pt: b[t],
+      lab: lo === 0 ? `${money(hi)} 이하` : `${money(lo)} 초과 ${money(hi)} 이하`,
+    });
+    lo = hi;
+  });
+  out.push({ id: 'aover', pt: null, over: true, lab: `${money(cap)} 초과`, note: '선발형 재산 요건을 넘습니다' });
+  return out;
+}
+
+// 가구원 문항 옆에 붙는 기준 중위소득 참조표
+function medianAside() {
+  const list = sizes();
+  if (!list.length) return '';
+  const youth = A.youth === true;
+  const capPct = youth ? 1.2 : 0.6;
+  return `<aside class="ref">
+    <div class="ref-head">
+      <span class="ref-kick">Reference</span>
+      <span class="ref-title">${esc(CONFIG.year || '')} 기준 중위소득</span>
+    </div>
+    <table>
+      <thead><tr><th>가구</th><th class="r">100%</th><th class="r">${Math.round(capPct * 100)}%</th></tr></thead>
+      <tbody>${list.map(n => `<tr${A.household === n ? ' class="on"' : ''}>
+        <td>${n}인</td>
+        <td class="r">${fmt(medianFor(n))}</td>
+        <td class="r">${fmt(Math.round(medianFor(n) * capPct))}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+    <p class="ref-foot">${youth
+      ? '청년특례는 중위소득 120% 이하까지 선발형 대상입니다.'
+      : '비경활은 중위소득 60% 이하까지 선발형 대상입니다.'}</p>
+  </aside>`;
+}
+
+/* ============ 문항 ============ */
+const STEPS = [
+  {
+    id: 'age', eyebrow: '나이',
+    ask: '만 나이가 어떻게 되나요?',
+    helper: '나이에 따라 적용되는 점수표가 달라집니다.',
+    choices: () => [
+      { id: 'y', lab: '만 15세 ~ 34세', note: '청년특례 기준으로 계산합니다' },
+      { id: 'a', lab: '만 35세 ~ 69세' },
+      { id: 'x', lab: '만 15세 미만 또는 70세 이상', note: '신청 대상이 아닙니다' },
+    ],
+    pick: v => { A.ageBand = v; if (v !== 'a') A.military = undefined; A.youth = (v === 'y'); },
+    value: () => A.ageBand,
+  },
+  {
+    id: 'military', eyebrow: '병역', when: () => A.ageBand === 'a',
+    ask: '병역을 이행하셨나요?',
+    helper: '이행하셨다면 복무 기간만큼 나이를 빼서 만 34세 이하가 되는지 봅니다. 해당하지 않으면 마지막 칸을 고르세요.',
+    choices: () => [
+      { id: 'yes', lab: '네, 복무 기간을 빼면 만 34세 이하가 됩니다', note: '청년특례 기준으로 계산합니다' },
+      { id: 'over', lab: '네, 하지만 빼도 만 35세 이상입니다' },
+      { id: 'none', lab: '아니요 · 해당 없음', note: '병역 이행 이력이 없거나 해당되지 않는 경우' },
+    ],
+    pick: v => { A.military = v; A.youth = (v === 'yes'); },
+    value: () => A.military,
+  },
+  {
+    id: 'household', eyebrow: '가구', when: () => A.ageBand !== 'x',
+    ask: '함께 사는 가족은 몇 명인가요?',
+    helper: '본인을 포함한 가구원 수입니다.',
+    choices: () => sizes().map(n => ({ id: String(n), lab: `${n}인 가구` })),
+    aside: medianAside,
+    pick: v => { A.household = Number(v); A.income = undefined; },
+    value: () => A.household ? String(A.household) : undefined,
+  },
+  {
+    id: 'income', eyebrow: '소득', when: () => A.ageBand !== 'x',
+    ask: '가구 전체의 월평균 총소득은?',
+    helper: () => `${A.household}인 가구 기준입니다. 함께 사는 가족의 소득을 모두 더한 금액이에요.`,
+    choices: incomeChoices,
+    pick: v => { A.income = v; },
+    value: () => A.income,
+    stop: () => A.income === 'iover',
+  },
+  {
+    id: 'asset', eyebrow: '재산', when: () => A.ageBand !== 'x',
+    ask: '가구의 재산을 모두 더하면?',
+    helper: '집, 땅, 자동차, 전월세 보증금 등을 합친 금액입니다.',
+    choices: assetChoices,
+    pick: v => { A.asset = v; },
+    value: () => A.asset,
+    stop: () => A.asset === 'aover',
+  },
+  {
+    id: 'work', eyebrow: '취업 경험', when: () => A.ageBand !== 'x',
+    ask: '최근 2년 동안 일한 기간을 모두 더하면?',
+    helper: '아르바이트와 단기 근무도 포함합니다.',
+    choices: () => WORK_BANDS.map(b => ({ id: b.id, lab: b.lab, pt: b[track()] })),
+    pick: v => { A.work = v; },
+    value: () => A.work,
+  },
+  {
+    id: 'child', eyebrow: '가산점', when: () => A.ageBand !== 'x',
+    ask: '미취학 자녀와 함께 살고 있나요?',
+    helper: '초등학교에 들어가기 전 자녀가 있으면 가산점이 붙습니다.',
+    choices: () => [
+      { id: 'yes', lab: '네', note: '가산점 5점' },
+      { id: 'no', lab: '아니요' },
+    ],
+    pick: v => { A.child = (v === 'yes'); },
+    value: () => A.child === undefined ? undefined : (A.child ? 'yes' : 'no'),
+  },
+  {
+    id: 'dup', eyebrow: '감점', when: () => A.ageBand !== 'x',
+    ask: '비슷한 취업 지원을 받은 적 있나요?',
+    helper: '국민취업지원제도나 이와 비슷한 정부 지원 사업을 말합니다.',
+    choices: () => DUP_BANDS.map(b => ({ id: b.id, lab: b.lab, pt: b.pt })),
+    pick: v => { A.dup = v; },
+    value: () => A.dup,
+  },
+  {
+    id: 'ready', eyebrow: '확인', when: () => A.ageBand !== 'x',
+    ask: '지금 바로 일할 수 있나요?',
+    helper: '구직 의사가 없거나 건강 때문에 당장 일하기 어려우면 수급 대상에서 제외됩니다.',
+    choices: () => [
+      { id: 'yes', lab: '네, 구직 중이고 일할 수 있어요' },
+      { id: 'no', lab: '아니요', note: '수급 대상에서 제외됩니다' },
+    ],
+    pick: v => { A.ready = (v === 'yes'); },
+    value: () => A.ready === undefined ? undefined : (A.ready ? 'yes' : 'no'),
+  },
+];
+
+function activeSteps() { return STEPS.filter(s => !s.when || s.when()); }
+
+/* ============ 계산 ============ */
+function calc() {
+  const t = track();
+  const incomeOpt = A.income ? incomeChoices().find(c => c.id === A.income) : null;
+  const assetOpt = A.asset ? assetChoices().find(c => c.id === A.asset) : null;
+  const workBand = WORK_BANDS.find(b => b.id === A.work) || null;
+  const dupBand = DUP_BANDS.find(b => b.id === A.dup) || null;
+
+  const incomePt = incomeOpt && !incomeOpt.over ? incomeOpt.pt : null;
+  const assetPt = assetOpt && !assetOpt.over ? assetOpt.pt : null;
+  const workPt = workBand ? workBand[t] : null;
+  const childPt = A.child ? CHILD_PT : 0;
+  const dupPt = dupBand ? dupBand.pt : 0;
+
+  const total = (incomePt || 0) + (assetPt || 0) + (workPt || 0) + childPt + dupPt;
+  const cutoff = (CONFIG.cutoff === null || CONFIG.cutoff === undefined || CONFIG.cutoff === '')
+    ? null : Number(CONFIG.cutoff);
+
+  return {
+    track: t, youth: A.youth === true,
+    incomeOpt, assetOpt, workBand, dupBand,
+    incomePt, assetPt, workPt, childPt, dupPt,
+    total, cutoff,
+    ageOut: A.ageBand === 'x',
+    incomeOver: !!(incomeOpt && incomeOpt.over),
+    assetOver: !!(assetOpt && assetOpt.over),
+    notReady: A.ready === false,
+  };
+}
+function verdictOf(r) {
+  if (r.ageOut) return { kind: 'no', head: '신청 대상이 아닙니다', why: '구직촉진수당은 만 15세 이상 69세 이하가 신청할 수 있습니다.' };
+  if (r.notReady) return { kind: 'no', head: '지금은 신청하기 어렵습니다', why: '구직 의사가 없거나 건강상 즉시 취업이 어려우면 점수와 관계없이 수급 대상에서 제외됩니다. 상황이 달라지면 다시 확인해 보세요.' };
+  if (r.incomeOver) return { kind: 'no', head: '소득 요건을 넘습니다', why: r.youth ? '청년특례도 기준 중위소득 120% 이하까지만 선발형 대상입니다.' : '중위소득 60% 이하까지만 선발형 대상입니다. 만 15~34세라면 나이를 다시 확인해 보세요.' };
+  if (r.assetOver) return { kind: 'no', head: '재산 요건을 넘습니다', why: `재산 합계가 ${money(ASSET_CAP[r.track])}을 넘으면 선발형 대상이 아닙니다.` };
+  if (r.cutoff === null) return { kind: 'none', head: '점수가 나왔습니다', why: '가능 여부를 표시하려면 기준 점수를 먼저 설정해야 합니다. 직원에게 문의해 주세요.' };
+  if (r.total >= r.cutoff) return { kind: 'ok', head: 'Ⅰ유형 선발형 신청 가능', why: `기준 ${r.cutoff}점을 ${r.total - r.cutoff}점 넘겼습니다. 선발 인원은 예산 범위에서 정해지므로 최종 결과는 고용센터 심사로 확정됩니다.` };
+  return { kind: 'no', head: '기준 점수가 모자랍니다', why: `기준 ${r.cutoff}점까지 ${r.cutoff - r.total}점 남았습니다. 가구원 수나 소득을 다시 확인해 보시고 상담자와 함께 점검해 보세요.` };
+}
+// 요건에서 걸리면 남은 문항을 묻지 않는다
+function stoppedAt() {
+  const list = activeSteps();
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
+    if (s.value() === undefined) return null;
+    if (A.ageBand === 'x') return i;
+    if (s.stop && s.stop()) return i;
+  }
+  return null;
+}
+function isDone() {
+  const list = activeSteps();
+  const stop = stoppedAt();
+  if (stop !== null) return true;
+  return list.every(s => s.value() !== undefined);
+}
+
+/* ============ 화면 ============ */
+function coverHtml() {
+  return `<div class="cover">
+    <div class="kicker">Self Assessment</div>
+    <h1>국민취업지원제도<br><em>Ⅰ유형 선발형</em><br>수급자격을 먼저 확인해보세요</h1>
+    <p class="lede">몇 가지 물음에 답하면 구직촉진수당 선발 점수가 계산됩니다.
+      글자 입력 할 것 없이 본인에게 해당하는 문항만 골라서 빠른 점수를 계산해보세요.</p>
+    <dl class="facts">
+      <div class="fact"><dt>Questions</dt><dd>${activeSteps().length}문항</dd></div>
+      <div class="fact"><dt>Duration</dt><dd>약 1분</dd></div>
+      <div class="fact"><dt>Basis</dt><dd>운영규정 별표 3</dd></div>
+    </dl>
+    <div class="go"><button class="act solid" id="startBtn">진단 시작</button></div>
+  </div>`;
+}
+
+function renderIndex(list, cur, done) {
+  const el = document.getElementById('indexList');
+  if (!el) return;
+  el.innerHTML = list.map((s, i) => {
+    const cls = done ? 'done' : (i === cur ? 'now' : (i < cur ? 'done' : ''));
+    return `<li class="${cls}"><i>${String(i + 1).padStart(2, '0')}</i><b>${esc(s.eyebrow)}</b></li>`;
+  }).join('') + `<li class="${done ? 'now' : ''}"><i>—</i><b>결과</b></li>`;
+}
+
+function render() {
+  const list = activeSteps();
+  const stop = stoppedAt();
+  if (idx > list.length) idx = list.length;
+  const done = (stop !== null && idx > stop) || (stop === null && idx >= list.length);
+
+  const backBtn = document.getElementById('backBtn');
+  const count = document.getElementById('count');
+  const bar = document.getElementById('bar');
+
+  if (!started) {
+    backBtn.classList.remove('on');
+    count.textContent = '';
+    bar.style.width = '0%';
+    renderIndex(list, -1, false);
+    document.getElementById('stage').innerHTML = coverHtml();
+    const go = document.getElementById('startBtn');
+    if (go) go.onclick = () => { started = true; render(); };
+    renderPrint();
+    return;
+  }
+
+  backBtn.classList.toggle('on', idx > 0 || started);
+  const shown = done ? list.length : idx;
+  bar.style.width = ((shown / (list.length || 1)) * 100) + '%';
+  count.textContent = done ? 'Result' : `${String(idx + 1).padStart(2, '0')} / ${String(list.length).padStart(2, '0')}`;
+  renderIndex(list, idx, done);
+
+  document.getElementById('stage').innerHTML = done ? resultHtml() : stepHtml(list[idx], idx, list.length);
+  if (!done) wireStep(list[idx]);
+  else wireResult();
+  renderPrint();
+}
+
+function stepHtml(step, i, n) {
+  const helper = typeof step.helper === 'function' ? step.helper() : step.helper;
+  const cur = step.value();
+  const choices = step.choices().map(c => {
+    const isPt = !c.note && c.pt !== undefined && c.pt !== null && c.pt !== 0;
+    const note = c.note || (isPt ? (c.pt > 0 ? `+${c.pt} POINT` : `${c.pt} POINT`) : '');
+    return `<button class="choice ${cur === c.id ? 'on' : ''}" data-v="${esc(c.id)}">
+      <span class="body"><span class="lab">${esc(c.lab)}</span>${note ? `<span class="note${isPt ? ' pt' : ''}">${esc(note)}</span>` : ''}</span>
+      <span class="mark"></span>
+    </button>`;
+  }).join('');
+  const aside = step.aside ? step.aside() : '';
+  return `<div class="step">
+    <div class="eyebrow"><span class="no">${String(i + 1).padStart(2, '0')}</span>${esc(step.eyebrow)}</div>
+    <h1 class="ask">${esc(step.ask)}</h1>
+    ${helper ? `<p class="helper">${esc(helper)}</p>` : ''}
+    <div class="qbody${aside ? ' with-ref' : ''}">
+      <div class="choices">${choices}</div>
+      ${aside}
+    </div>
+  </div>`;
+}
+function wireStep(step) {
+  document.querySelectorAll('.choice').forEach(b => {
+    b.onclick = () => {
+      step.pick(b.dataset.v);
+      idx++;
+      render();
+    };
+  });
+}
+
+// 어느 항목에서 몇 점을 놓쳤는지 따져 보완 방법을 붙인다
+function gapsOf(r) {
+  const t = r.track;
+  const items = [];
+
+  const bestIncome = INCOME_BANDS[0][t];
+  if (r.incomeOver) {
+    items.push({ name: '가구 월평균 총소득', lost: null, kind: 'income' });
+  } else if (r.incomePt !== null && r.incomePt < bestIncome) {
+    items.push({ name: '가구 월평균 총소득', lost: bestIncome - r.incomePt, kind: 'income' });
+  }
+
+  const bestAsset = ASSET_BANDS[0][t];
+  if (r.assetOver) {
+    items.push({ name: '재산의 합계액', lost: null, kind: 'asset' });
+  } else if (r.assetPt !== null && r.assetPt < bestAsset) {
+    items.push({ name: '재산의 합계액', lost: bestAsset - r.assetPt, kind: 'asset' });
+  }
+
+  const bestWork = WORK_BANDS[0][t];
+  if (r.workPt !== null && r.workPt < bestWork) {
+    items.push({ name: '최근 2년 취업 기간', lost: bestWork - r.workPt, kind: 'work' });
+  }
+
+  if (r.dupPt < 0) {
+    items.push({ name: '유사 제도 수혜 감점', lost: -r.dupPt, kind: 'dup' });
+  }
+
+  // 잃은 점수가 큰 순서로. 요건 초과(lost === null)는 맨 앞에 둔다
+  items.sort((a, b) => (a.lost === null ? -1 : b.lost === null ? 1 : b.lost - a.lost));
+  return items;
+}
+
+const GAP_TEXT = {
+  income: [
+    '소득은 <b>본인 한 사람이 아니라 가구 전체</b>를 기준으로 봅니다. 가구 범위는 주민등록등본을 기준으로 판단하는데, 배우자나 미혼 자녀처럼 주소가 달라도 함께 보는 경우가 있어 정확한 범위는 고용센터에서 확인해야 합니다.',
+    '<b>이미 따로 살고 있는데 등본만 정리되지 않은 경우</b>라면, 실제 거주지에 맞게 등본을 정정하는 것만으로 가구원 수와 소득 산정이 달라집니다. 실제 거주지와 등본이 다른 분에게 해당하는 이야기입니다.',
+    '소득에 무엇이 포함되는지도 함께 확인해 보세요. 세전 기준인지, 비과세 항목이 빠지는지에 따라 구간이 바뀔 수 있습니다.',
+  ],
+  asset: [
+    '재산은 가구원 전체의 토지·건물·자동차·전월세 보증금 등을 합쳐 봅니다. <b>가구 범위가 달라지면 재산도 함께 다시 산정</b>되므로, 소득과 같은 이유로 구간이 바뀔 수 있습니다.',
+    '산정 대상과 공제 항목이 따로 정해져 있습니다. 등본과 재산 관련 서류를 들고 고용센터에서 확인하면 정확한 금액을 알 수 있습니다.',
+  ],
+  work: [
+    '이 항목은 <b>신청일을 기준으로 2년을 거슬러</b> 계산합니다. 시간이 지나면 해당 구간이 달라질 수 있으니, 근로 이력의 시점을 확인해 신청 시기를 잡아 보는 것도 방법입니다.',
+  ],
+  dup: [
+    '감점 10점은 신청일 이전 <b>1년 이내</b>에 참여했거나 지원을 받은 경우에 적용됩니다. 1년이 지나면 감점이 5점으로 줄어듭니다. 참여 종료일을 확인해 신청 시기를 잡아 보세요.',
+  ],
+};
+
+// 상담 당일부터 이틀 뒤를 접수 마감으로 잡는다
+function deadline() {
+  const now = new Date();
+  const due = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+  const p2 = n => String(n).padStart(2, '0');
+  return {
+    month: p2(now.getMonth() + 1),
+    label: `${p2(due.getMonth() + 1)}월 ${p2(due.getDate())}일`,
+  };
+}
+
+// 조건을 갖춘 학생에게 접수 마감을 알려 준다
+function urgeHtml(r, v) {
+  if (v.kind !== 'ok') return '';
+  const d = deadline();
+  return `<div class="urge">
+    <div class="kick">Application Deadline</div>
+    <div class="slogan"><b>자격 확인이 완료되었습니다.</b></div>
+    <div class="dl">
+      <span class="dl-lab">${d.month}월 국민취업지원제도 접수 마감 예정 일자</span>
+      <span class="dl-date">${d.label}</span>
+    </div>
+    <div class="docs">
+      <span class="docs-lab">추가서류 요청 안내</span>
+      <span class="docs-body">국민취업지원제도 희망 커리큘럼 편성 및 학사일정 제출 신청 요망</span>
+      <dl class="docs-due"><dt>제출 기한</dt><dd>${d.label}</dd></dl>
+    </div>
+    <p class="say">선발형은 정해진 예산 내에서 고득점자를 우선순위로 선발합니다.
+      동일한 점수라도 <b>접수가 늦어지면 다음 차수로 밀리게 됩니다.</b>
+      제출 서류를 구비하는데에도 시간이 걸리니 마감일 이전에 사전 접수를 꼭 마쳐주세요.</p>
+  </div>`;
+}
+
+function guideHtml(r, v) {
+  if (v.kind === 'ok') return '';
+  const items = gapsOf(r);
+  if (!items.length) return '';
+  return `<div class="guide">
+    <div class="guide-head">
+      <span class="kick">Remedy</span>
+      <span class="ttl">모자란 부분과 보완 방법</span>
+    </div>
+    ${items.map((g, i) => `<div class="guide-item">
+      <div class="row">
+        <span class="no">${String(i + 1).padStart(2, '0')}</span>
+        <span class="name">${esc(g.name)}</span>
+        <span class="lost">${g.lost === null ? '요건 초과' : '\u2212' + g.lost + '점'}</span>
+      </div>
+      ${GAP_TEXT[g.kind].map(t => `<p>${t}</p>`).join('')}
+    </div>`).join('')}
+    <div class="guide-note">
+      위 항목은 서류와 가구 범위를 확인하는 것만으로 달라지는 경우가 적지 않습니다.
+      <b>어떤 항목을 어떻게 정리할지, 신청 시기를 언제로 잡을지는 담당 멘토와 함께 짚어 보시는 편이 빠릅니다.</b>
+      아래에 연락처를 남겨 두시면 필요한 서류와 일정을 정리해 드립니다.<br>
+      여기 적힌 내용은 상담 참고용이며, 실제 요건 판단과 서류 심사는 고용센터에서 합니다.
+    </div>
+  </div>`;
+}
+
+function resultHtml() {
+  const r = calc();
+  const v = verdictOf(r);
+  const scoreShown = !r.ageOut && !r.incomeOver && !r.assetOver;
+  const scale = Math.max(100, (r.cutoff || 0) + 15, r.total);
+  const rows = [];
+  if (r.incomePt !== null) rows.push({ k: '가구 월평균 총소득', s: r.incomeOpt.note, v: r.incomePt });
+  if (r.assetPt !== null) rows.push({ k: '재산의 합계액', s: r.assetOpt.lab, v: r.assetPt });
+  if (r.workPt !== null) rows.push({ k: '최근 2년 취업 기간', s: r.workBand.lab, v: r.workPt });
+  if (r.childPt) rows.push({ k: '미취학 자녀 가산', v: r.childPt, cls: 'plus' });
+  if (r.dupPt) rows.push({ k: '유사 제도 수혜 감점', s: r.dupBand.lab, v: r.dupPt, cls: 'minus' });
+
+  return `<div class="result">
+    <div class="verdict ${v.kind === 'ok' ? 'ok' : ''}">
+      ${scoreShown ? `<div class="score">${r.total}<span>점</span></div>` : ''}
+      <div class="head">${esc(v.head)}</div>
+      <div class="why">${esc(v.why)}</div>
+    </div>
+
+    ${scoreShown && r.cutoff !== null ? `
+      <div class="gauge ${v.kind}">
+        <div class="track">
+          <div class="fill" style="width:${Math.min(100, (r.total / scale) * 100)}%"></div>
+          <div class="pin" style="left:${Math.min(100, (r.cutoff / scale) * 100)}%"></div>
+        </div>
+        <div class="cap"><span>내 점수 ${r.total}점</span><span>기준 ${r.cutoff}점</span></div>
+      </div>` : ''}
+
+    ${rows.length ? `<div class="lines">
+      <h3>점수 내역</h3>
+      ${rows.map(x => `<div class="line">
+        <span class="k">${esc(x.k)}${x.s ? `<small>${esc(x.s)}</small>` : ''}</span>
+        <span class="v ${x.cls || ''}">${x.v > 0 && x.cls === 'plus' ? '+' : ''}${x.v}점</span>
+      </div>`).join('')}
+      <div class="line sum"><span class="k">합계</span><span class="v">${r.total}점</span></div>
+    </div>` : ''}
+
+    ${urgeHtml(r, v)}
+    ${guideHtml(r, v)}
+
+    <div class="namebox">
+      <div class="head">
+        <span class="kick">Pre-registration</span>
+        <span class="ttl">사전접수 신청</span>
+        <span class="sub">${v.kind === 'ok'
+          ? '지금 남겨 두시면 접수 순서가 확보됩니다. 담당 멘토가 신청 절차와 필요한 서류를 바로 안내해 드립니다.'
+          : '연락처를 남기시면 담당 멘토가 보완할 항목과 신청 일정을 함께 정리해 드립니다.'}</span>
+      </div>
+      <div class="fields">
+        <div class="fld2">
+          <label for="nm">이름</label>
+          <input type="text" id="nm" maxlength="20" placeholder="홍길동" value="${esc(A.name || '')}">
+        </div>
+        <div class="fld2">
+          <label for="ct">연락처</label>
+          <input type="tel" id="ct" maxlength="20" inputmode="numeric" placeholder="010-0000-0000" value="${esc(A.contact || '')}">
+        </div>
+      </div>
+    </div>
+
+    <div class="acts">
+      <button class="act solid" id="saveBtn">사전접수 신청하기</button>
+      <button class="act" onclick="window.print()">인쇄 · PDF</button>
+      <button class="act quiet" onclick="restart()">처음부터 다시</button>
+    </div>
+
+    <p class="fine">
+      점수가 같으면 ① 가구 월평균 총소득, ② 재산의 합계액, ③ 미취업기간 순으로 우선순위를 정합니다.
+      이 진단은 「국민취업지원제도 운영규정」 별표 3 기준으로 계산한 참고 자료이며,
+      실제 수급자격은 고용센터 심사로 결정됩니다.
+    </p>
+  </div>`;
+}
+function wireResult() {
+  const nm = document.getElementById('nm');
+  if (nm) nm.oninput = e => { A.name = e.target.value; renderPrint(); };
+  const ct = document.getElementById('ct');
+  if (ct) {
+    // 숫자만 받아 010-0000-0000 꼴로 끊어 보여 준다
+    ct.oninput = e => {
+      const d = String(e.target.value || '').replace(/[^0-9]/g, '').slice(0, 11);
+      let out = d;
+      if (d.length > 7) out = d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+      else if (d.length > 3) out = d.slice(0, 3) + '-' + d.slice(3);
+      e.target.value = out;
+      A.contact = out;
+      renderPrint();
+    };
+  }
+  const btn = document.getElementById('saveBtn');
+  if (btn) btn.onclick = saveCheck;
+}
+
+function goBack() {
+  if (idx > 0) { idx--; render(); }
+  else if (started) { started = false; render(); }
+}
+function restart() {
+  Object.keys(A).forEach(k => delete A[k]);
+  idx = 0;
+  started = false;
+  render();
+}
+
+function renderPrint() {
+  const r = calc();
+  const v = verdictOf(r);
+  const rows = [];
+  if (r.incomePt !== null) rows.push(['가구 월평균 총소득', r.incomeOpt.note + ' · ' + r.incomeOpt.lab, r.incomePt]);
+  if (r.assetPt !== null) rows.push(['재산의 합계액', r.assetOpt.lab, r.assetPt]);
+  if (r.workPt !== null) rows.push(['최근 2년 취업 기간', r.workBand.lab, r.workPt]);
+  if (r.childPt) rows.push(['미취학 자녀 가산', '해당', r.childPt]);
+  if (r.dupPt) rows.push(['유사 제도 수혜 감점', r.dupBand.lab, r.dupPt]);
+  document.getElementById('sheetPrint').innerHTML = `
+    <div class="ph">SBS Academy AIX · Hongdae</div>
+    <h1>국민취업지원제도 Ⅰ유형 선발형 자가진단</h1>
+    <div class="meta">${esc(A.name) || '이름 ________'}${A.contact ? ' · ' + esc(A.contact) : ''} ·
+      ${r.youth ? '청년특례' : '비경활'} 기준 · ${new Date().toLocaleDateString('ko-KR')}</div>
+    <table>
+      <thead><tr><th style="width:34%;">항목</th><th>내용</th><th class="r" style="width:14%;">점수</th></tr></thead>
+      <tbody>
+        ${rows.map(x => `<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td><td class="r">${x[2]}점</td></tr>`).join('')}
+        <tr class="sum"><td colspan="2">합계</td><td class="r">${r.total}점</td></tr>
+      </tbody>
+    </table>
+    <div class="verdictLine">${esc(v.head)}${r.cutoff !== null ? ` (기준 ${r.cutoff}점)` : ''}</div>
+    <p class="fine">${esc(v.why)}<br>
+      점수가 같으면 ① 가구 월평균 총소득, ② 재산의 합계액, ③ 미취업기간 순으로 우선순위를 정합니다.
+      실제 수급자격은 고용센터 심사로 결정됩니다.</p>`;
+}
+
+/* ============ 저장 ============ */
+// 버튼을 누르면 곧바로 보내지 않고 확인 팝업을 먼저 띄운다
+function saveCheck() {
+  const r = calc();
+  const name = (A.name || '').trim();
+  const contact = (A.contact || '').trim();
+  if (!name) { const el = document.getElementById('nm'); if (el) el.focus(); toast('이름을 넣어 주세요'); return; }
+  if (contact.replace(/[^0-9]/g, '').length < 9) {
+    const el = document.getElementById('ct'); if (el) el.focus();
+    toast('연락처를 정확히 넣어 주세요'); return;
+  }
+  const v = verdictOf(r);
+  const d = deadline();
+  document.getElementById('confirmBody').innerHTML = `
+    <p class="cf-lead">아래 내용으로 사전접수를 신청합니다. 맞는지 확인해 주세요.</p>
+    <dl class="cf-list">
+      <div class="cf-row"><dt>이름</dt><dd>${esc(name)}</dd></div>
+      <div class="cf-row"><dt>연락처</dt><dd>${esc(contact)}</dd></div>
+      <div class="cf-row"><dt>적용 기준</dt><dd>${r.youth ? '청년특례' : '비경활'}</dd></div>
+      <div class="cf-row big"><dt>산정 점수</dt><dd>${r.total}점</dd></div>
+      <div class="cf-row"><dt>진단 결과</dt><dd>${esc(v.head)}</dd></div>
+      ${v.kind === 'ok' ? `<div class="cf-row"><dt>접수 마감 예정</dt><dd>${d.label}</dd></div>` : ''}
+    </dl>
+    <div class="cf-note">
+      확정하시면 <b>담당 멘토에게 바로 전달</b>됩니다. 연락처가 틀리면 안내를 받을 수 없으니 한 번 더 봐 주세요.<br>
+      연락처는 상담 안내 목적으로만 쓰이며, 소득과 재산 금액은 저장하지 않습니다.
+    </div>`;
+  document.getElementById('confirmBtn').onclick = submitCheck;
+  openVeil('confirmVeil');
+}
+
+async function submitCheck() {
+  const r = calc();
+  const name = (A.name || '').trim();
+  const contact = (A.contact || '').trim();
+  const v = verdictOf(r);
+  if (!db) { closeVeil('confirmVeil'); toast('미리보기라 신청은 접수되지 않습니다'); return; }
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true; btn.textContent = '접수 중...';
+  // 소득·재산 금액은 남기지 않고 어느 구간인지만 남긴다
+  const rec = {
+    id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    name, contact, track: r.youth ? '청년특례' : '비경활',
+    household: A.household || null,
+    incomeBand: r.incomeOpt ? r.incomeOpt.note : '',
+    assetBand: r.assetOpt ? r.assetOpt.lab : '',
+    workBand: r.workBand ? r.workBand.lab : '',
+    incomePt: r.incomePt, assetPt: r.assetPt, workPt: r.workPt,
+    extraPt: r.childPt + r.dupPt,
+    total: r.total, cutoff: r.cutoff,
+    verdict: v.head, pass: v.kind === 'ok',
+    by: STAFF ? STAFF.email : '학생 직접',
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    await db.collection('sbs_score_checks').doc(rec.id).set(rec);
+    closeVeil('confirmVeil');
+    toast('사전접수가 완료됐습니다. 곧 연락드리겠습니다');
+  } catch (e) {
+    console.warn(e);
+    toast('접수하지 못했습니다. 잠시 후 다시 시도해 주세요');
+  }
+  btn.disabled = false; btn.textContent = '신청 확정';
+}
+
+/* ============ 설정 ============ */
+async function loadConfig() {
+  if (!db) return;
+  try {
+    const doc = await db.collection('sbs_score_config').doc('data').get();
+    if (!doc.exists) return;
+    const raw = doc.data() || {};
+    CONFIG_REV = Number(raw.rev) || 0;
+    const med = {};
+    const src = (raw.median && typeof raw.median === 'object') ? raw.median : DEFAULT_CONFIG.median;
+    Object.keys(src).forEach(k => { const n = Number(src[k]); if (Number(k) > 0 && n > 0) med[Number(k)] = n; });
+    CONFIG = {
+      cutoff: (raw.cutoff === null || raw.cutoff === undefined || raw.cutoff === '') ? null : Number(raw.cutoff),
+      year: raw.year || DEFAULT_CONFIG.year,
+      median: Object.keys(med).length ? med : DEFAULT_CONFIG.median,
+    };
+  } catch (e) {
+    console.warn('기준 설정을 불러오지 못해 기본값으로 시작합니다', e);
+  }
+}
+function openConfig() {
+  document.getElementById('cfgCut').value = CONFIG.cutoff === null ? '' : CONFIG.cutoff;
+  document.getElementById('cfgYear').value = CONFIG.year || '';
+  let rows = '';
+  for (let n = 1; n <= 10; n++) {
+    const v = CONFIG.median[n];
+    rows += `<div class="mrow"><span>${n}인</span><input type="text" data-hh="${n}" inputmode="numeric" value="${v ? fmt(v) : ''}" placeholder="미사용"></div>`;
+  }
+  document.getElementById('cfgRows').innerHTML = rows;
+  document.querySelectorAll('#cfgRows input').forEach(el => {
+    el.oninput = () => { const d = digits(el.value); el.value = d === '' ? '' : fmt(Number(d)); };
+  });
+  openVeil('cfgVeil');
+}
+async function saveConfig() {
+  if (!db) { toast('시안 미리보기라 저장은 되지 않습니다'); return; }
+  const cutRaw = document.getElementById('cfgCut').value.trim();
+  const cutoff = cutRaw === '' ? null : Math.max(0, Math.floor(Number(cutRaw) || 0));
+  const year = document.getElementById('cfgYear').value.trim();
+  const median = {};
+  document.querySelectorAll('#cfgRows input').forEach(el => {
+    const n = Number(el.dataset.hh), v = Number(digits(el.value));
+    if (n > 0 && v > 0) median[n] = v;
+  });
+  if (!Object.keys(median).length) { toast('중위소득을 최소 한 줄은 넣어 주세요'); return; }
+  const ref = db.collection('sbs_score_config').doc('data');
+  try {
+    const next = await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      const serverRev = snap.exists ? (Number(snap.data().rev) || 0) : 0;
+      if (snap.exists && serverRev !== CONFIG_REV) { const e = new Error('conflict'); e.name = 'ConfigConflict'; throw e; }
+      const rev = serverRev + 1;
+      tx.set(ref, { cutoff, year, median, rev, updatedAt: new Date().toISOString() });
+      return rev;
+    });
+    CONFIG_REV = next;
+    CONFIG = { cutoff, year, median };
+    if (A.household && !medianFor(A.household)) { A.household = undefined; A.income = undefined; }
+    closeVeil('cfgVeil');
+    render();
+    toast('기준을 저장했습니다');
+  } catch (e) {
+    if (e && e.name === 'ConfigConflict') alert('다른 사람이 기준을 먼저 바꿨습니다. 새로고침한 뒤 다시 저장해 주세요.');
+    else { console.warn(e); toast('저장하지 못했습니다'); }
+  }
+}
+
+/* ============ 기록 ============ */
+async function openRecords() {
+  if (!db) { toast('시안 미리보기라 기록을 볼 수 없습니다'); return; }
+  openVeil('recVeil');
+  const body = document.getElementById('recBody');
+  body.innerHTML = '<div class="blank">불러오는 중...</div>';
+  try {
+    const snap = await db.collection('sbs_score_checks').orderBy('savedAt', 'desc').limit(200).get();
+    const list = snap.docs.map(d => d.data());
+    if (!list.length) { body.innerHTML = '<div class="blank">저장된 진단이 아직 없습니다.</div>'; return; }
+    body.innerHTML = list.map(x => `
+      <div class="rec">
+        <span class="who">${esc(x.name)}
+          <small>${esc(x.contact) || '연락처 없음'} · ${esc(String(x.savedAt || '').slice(2, 10).replace(/-/g, '.'))} · ${esc(x.track)}</small>
+        </span>
+        <span class="sc">${esc(x.total)}점
+          <small class="${x.pass ? 'ok' : 'no'}">${esc(x.verdict)}</small>
+        </span>
+      </div>`).join('');
+  } catch (e) {
+    body.innerHTML = '<div class="blank">기록을 불러오지 못했습니다. 로그인 상태를 확인해 주세요.</div>';
+  }
+}
+
+/* ============ 로그인 ============ */
+function openLogin() { document.getElementById('lgErr').textContent = ''; openVeil('loginVeil'); }
+function loginError(e) {
+  switch (e && e.code) {
+    case 'auth/invalid-email': return '이메일 형식이 올바르지 않습니다';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential': return '이메일 또는 비밀번호가 올바르지 않습니다';
+    case 'auth/too-many-requests': return '시도가 너무 많습니다. 잠시 후 다시 시도해 주세요';
+    case 'auth/network-request-failed': return '네트워크에 연결할 수 없습니다';
+    default: return '로그인 실패: ' + ((e && (e.message || e.code)) || '알 수 없는 오류');
+  }
+}
+async function doLogin() {
+  if (!auth) { closeVeil('loginVeil'); return; }
+  const email = document.getElementById('lgEmail').value.trim();
+  const pw = document.getElementById('lgPw').value;
+  const err = document.getElementById('lgErr');
+  if (!email || !pw) { err.textContent = '이메일과 비밀번호를 모두 넣어 주세요'; return; }
+  const btn = document.getElementById('lgBtn');
+  btn.disabled = true; btn.textContent = '확인 중...';
+  err.textContent = '';
+  try {
+    await auth.signInWithEmailAndPassword(email, pw);
+    document.getElementById('lgPw').value = '';
+    closeVeil('loginVeil');
+  } catch (e) { err.textContent = loginError(e); }
+  btn.disabled = false; btn.textContent = '로그인';
+}
+async function staffLogout() {
+  if (!confirm('로그아웃할까요?')) return;
+  try { await auth.signOut(); } catch (e) {}
+  location.reload();
+}
+function applyAuthUI() {
+  if (!auth) { document.querySelector('.staffbar').style.display = 'none'; return; }
+  const on = !!STAFF;
+  document.getElementById('recBtn').style.display = on ? 'block' : 'none';
+  document.getElementById('cfgBtn').style.display = on ? 'block' : 'none';
+  const b = document.getElementById('staffBtn');
+  b.textContent = on ? '로그아웃' : '직원 로그인';
+  b.onclick = on ? staffLogout : openLogin;
+  document.getElementById('me').textContent = on ? STAFF.email : '';
+}
+
+/* ============ 시작 ============ */
+if (auth) {
+  auth.onAuthStateChanged(async user => {
+    if (user && !user.isAnonymous) STAFF = { email: user.email || '' };
+    else {
+      STAFF = null;
+      // 학생이 로그인 없이 쓸 수 있도록 익명으로 접속한다
+      if (!user) { try { await auth.signInAnonymously(); } catch (e) { console.warn('익명 접속 실패', e); } }
+    }
+    applyAuthUI();
+    await loadConfig();
+    render();
+  });
+} else {
+  // 미리보기: 서버를 거치지 않고 바로 화면을 띄운다
+  CONFIG = Object.assign({}, DEFAULT_CONFIG, { cutoff: PREVIEW_CUTOFF });
+  document.querySelector('.staffbar').style.display = 'none';
+  applyAuthUI();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.veil.on').forEach(v => v.classList.remove('on'));
+});
+document.querySelectorAll('.veil').forEach(v => {
+  v.addEventListener('click', e => { if (e.target === v) v.classList.remove('on'); });
+});
+['lgEmail', 'lgPw'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+});
+render();
+</script>
+</body>
+</html>
