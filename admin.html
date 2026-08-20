@@ -55,6 +55,10 @@ button { cursor: pointer; border: none; background: none; color: inherit; }
 .head .t h1 { margin-top: 8px; font-size: 25px; font-weight: 700; letter-spacing: -0.035em; }
 .head .who { font-size: 12.5px; color: var(--g500); text-align: right; }
 .head .who button { display: block; margin-top: 6px; margin-left: auto; font-size: 12.5px; font-weight: 500; color: var(--g300); }
+/* 신청 완료 여부를 목록에서 바로 누른다 */
+.stbtn { padding: 5px 10px; border: 1px solid var(--g200); font-size: 12.5px; font-weight: 500; color: var(--g500); white-space: nowrap; }
+.stbtn:hover { border-color: var(--black); color: var(--black); }
+.stbtn.done { background: var(--black); border-color: var(--black); color: var(--paper); }
 .head .who button:hover { color: var(--black); }
 
 /* 요약 */
@@ -170,7 +174,8 @@ button { cursor: pointer; border: none; background: none; color: inherit; }
   <div class="tools">
     <div class="tabs" id="tabs">
       <button data-f="all" class="on">전체</button>
-      <button data-f="new">미확인</button>
+      <button data-f="pending">미완료</button>
+      <button data-f="done">신청완료</button>
       <button data-f="pass">가능</button>
       <button data-f="fail">미달</button>
     </div>
@@ -251,8 +256,9 @@ function dayKey(iso) {
   const d = new Date(iso);
   return isNaN(d) ? '' : `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
-const statusOf = r => r.status || 'new';
-const STATUS_LABEL = { new: '미확인', contacted: '연락함', done: '등록완료' };
+// 실제 신청을 마쳤는지만 본다
+const isDone = r => r.status === 'done';
+const statusLabel = r => (isDone(r) ? '신청완료' : '미완료');
 
 /* ---------- 불러오기 ---------- */
 async function loadAll(reset) {
@@ -279,7 +285,8 @@ function visible() {
   return ROWS.filter(r => {
     if (filter === 'pass' && !r.pass) return false;
     if (filter === 'fail' && r.pass) return false;
-    if (filter === 'new' && statusOf(r) !== 'new') return false;
+    if (filter === 'pending' && isDone(r)) return false;
+    if (filter === 'done' && !isDone(r)) return false;
     if (k) {
       const hay = (String(r.name || '') + String(r.contact || '')).replace(/[^0-9가-힣a-zA-Z]/g, '');
       if (!hay.includes(k)) return false;
@@ -292,10 +299,10 @@ function renderSums() {
   const today = dayKey(new Date().toISOString());
   const total = ROWS.length;
   const pass = ROWS.filter(r => r.pass).length;
-  const fresh = ROWS.filter(r => statusOf(r) === 'new').length;
+  const done = ROWS.filter(isDone).length;
   const todayN = ROWS.filter(r => dayKey(r.savedAt) === today).length;
   const cells = [
-    ['전체 접수', total], ['오늘', todayN], ['미확인', fresh], ['가능 판정', pass],
+    ['전체 접수', total], ['오늘', todayN], ['가능 판정', pass], ['신청완료', done],
   ];
   document.getElementById('sums').innerHTML = cells.map(([k, v]) =>
     `<div class="sum"><dt>${k}</dt><dd class="num">${v}<span>건</span></dd></div>`).join('');
@@ -315,26 +322,32 @@ function render() {
         <th style="width:88px;">접수</th>
         <th>이름</th>
         <th class="hide">연락처</th>
-        <th class="hide" style="width:88px;">기준</th>
+        <th class="hide" style="width:92px;">상담 멘토</th>
+        <th class="hide" style="width:80px;">기준</th>
         <th class="r" style="width:70px;">점수</th>
         <th style="width:96px;">판정</th>
-        <th style="width:86px;">처리</th>
+        <th style="width:96px;">신청</th>
       </tr></thead>
       <tbody>${list.map(r => `
         <tr class="row" data-id="${esc(r.id)}">
           <td class="num muted">${when(r.savedAt)}</td>
           <td><span class="nm">${esc(r.name)}</span></td>
           <td class="hide ct">${esc(r.contact) || '—'}</td>
+          <td class="hide">${esc(r.mentorName) || '<span class="muted">—</span>'}</td>
           <td class="hide muted">${esc(r.track)}</td>
           <td class="r sc">${esc(r.total)}</td>
           <td><span class="tag ${r.pass ? 'pass' : 'fail'}">${r.pass ? '가능' : '미달'}</span></td>
-          <td><span class="st ${statusOf(r)}">${STATUS_LABEL[statusOf(r)]}</span></td>
+          <td><button class="stbtn ${isDone(r) ? 'done' : ''}" data-toggle="${esc(r.id)}">${statusLabel(r)}</button></td>
         </tr>`).join('')}
       </tbody>
     </table>
     ${noMore ? '' : '<button class="more" onclick="loadAll(false)">더 불러오기</button>'}`;
   wrap.querySelectorAll('tr.row').forEach(tr => {
     tr.onclick = () => openDetail(tr.dataset.id);
+  });
+  // 목록에서 바로 신청 여부를 바꾼다
+  wrap.querySelectorAll('.stbtn').forEach(b => {
+    b.onclick = e => { e.stopPropagation(); toggleDone(b.dataset.toggle); };
   });
 }
 
@@ -348,6 +361,7 @@ function openDetail(id) {
   document.getElementById('dBody').innerHTML = `
     ${row('연락처', r.contact || '—')}
     ${row('접수 시각', when(r.savedAt))}
+    ${row('상담 멘토', r.mentorName || '—')}
     ${row('작성 경로', r.by || '—')}
     <div class="grp">진단 결과</div>
     ${row('적용 기준', r.track || '—')}
@@ -360,13 +374,13 @@ function openDetail(id) {
     ${row('재산 구간', (r.assetBand || '—') + (r.assetPt != null ? ` · ${r.assetPt}점` : ''))}
     ${row('취업 기간', (r.workBand || '—') + (r.workPt != null ? ` · ${r.workPt}점` : ''))}
     ${row('가감점', (r.extraPt || 0) + '점')}
-    <div class="grp">처리 상태</div>
+    <div class="grp">신청 여부</div>
     <div class="stbtns">
-      ${['new', 'contacted', 'done'].map(k =>
-        `<button data-st="${k}" class="${statusOf(r) === k ? 'on' : ''}">${STATUS_LABEL[k]}</button>`).join('')}
+      <button data-st="pending" class="${isDone(r) ? '' : 'on'}">미완료</button>
+      <button data-st="done" class="${isDone(r) ? 'on' : ''}">신청완료</button>
     </div>`;
   document.querySelectorAll('.stbtns button').forEach(b => {
-    b.onclick = () => setStatus(b.dataset.st);
+    b.onclick = () => setStatus(b.dataset.st, r.id);
   });
   document.getElementById('detailVeil').classList.add('on');
 }
@@ -375,10 +389,15 @@ function closeDetail() {
   current = null;
 }
 
-async function setStatus(st) {
-  if (!current) return;
+function toggleDone(id) {
+  const r = ROWS.find(x => x.id === id);
+  if (r) setStatus(isDone(r) ? 'pending' : 'done', id);
+}
+
+async function setStatus(st, id) {
+  const r = ROWS.find(x => x.id === id) || current;
+  if (!r) return;
   if (!db) { toast('설정을 넣어야 저장됩니다'); return; }
-  const r = current;
   const before = r.status;
   r.status = st;
   document.querySelectorAll('.stbtns button').forEach(b => b.classList.toggle('on', b.dataset.st === st));
@@ -387,7 +406,7 @@ async function setStatus(st) {
     await db.collection('sbs_score_checks').doc(r.id).update({
       status: st, statusAt: new Date().toISOString(), statusBy: STAFF ? STAFF.email : '',
     });
-    toast(STATUS_LABEL[st] + '으로 바꿨습니다');
+    toast(st === 'done' ? '신청완료로 바꿨습니다' : '미완료로 되돌렸습니다');
   } catch (e) {
     r.status = before;
     render();
@@ -415,14 +434,14 @@ async function removeRec() {
 function downloadCsv() {
   const list = visible();
   if (!list.length) { toast('내려받을 내용이 없습니다'); return; }
-  const head = ['접수시각', '이름', '연락처', '적용기준', '가구원수', '소득구간', '소득점수',
-    '재산구간', '재산점수', '취업기간', '취업점수', '가감점', '합계', '기준점수', '판정', '처리상태', '작성경로'];
+  const head = ['접수시각', '이름', '연락처', '상담멘토', '적용기준', '가구원수', '소득구간', '소득점수',
+    '재산구간', '재산점수', '취업기간', '취업점수', '가감점', '합계', '기준점수', '판정', '신청여부', '작성경로'];
   const cell = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
   const lines = [head.map(cell).join(',')];
   list.forEach(r => lines.push([
-    when(r.savedAt), r.name, r.contact, r.track, r.household, r.incomeBand, r.incomePt,
+    when(r.savedAt), r.name, r.contact, r.mentorName, r.track, r.household, r.incomeBand, r.incomePt,
     r.assetBand, r.assetPt, r.workBand, r.workPt, r.extraPt, r.total, r.cutoff,
-    r.verdict, STATUS_LABEL[statusOf(r)], r.by,
+    r.verdict, statusLabel(r), r.by,
   ].map(cell).join(',')));
   // 엑셀이 한글을 깨뜨리지 않도록 BOM 을 붙인다
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
