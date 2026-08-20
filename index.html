@@ -270,8 +270,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .namebox .head .ttl { display: block; margin-top: 9px; font-size: 17px; font-weight: 700; letter-spacing: -0.03em; color: var(--black); }
 .namebox .head .sub { display: block; margin-top: 9px; font-size: 13.5px; font-weight: 400; color: var(--g500); line-height: 1.8; letter-spacing: -0.015em; }
 .namebox .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; margin-top: 10px; }
+.namebox .fields.three { grid-template-columns: 1fr 1fr 1fr; gap: 0 24px; }
+@media (max-width: 760px) { .namebox .fields.three { grid-template-columns: 1fr 1fr; } }
 .namebox .fld2 { padding-top: 20px; }
-@media (max-width: 620px) { .namebox .fields { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 620px) { .namebox .fields, .namebox .fields.three { grid-template-columns: 1fr; gap: 0; } }
 .namebox label {
   display: block; font-size: 13px; font-weight: 700;
   letter-spacing: -0.01em; color: var(--g500); margin-bottom: 10px;
@@ -1071,7 +1073,7 @@ function resultHtml() {
           ? '지금 남겨 두시면 접수 순서가 확보됩니다. 담당 멘토가 신청 절차와 필요한 서류를 바로 안내해 드립니다.'
           : '연락처를 남기시면 담당 멘토가 보완할 항목과 신청 일정을 함께 정리해 드립니다.'}</span>
       </div>
-      <div class="fields">
+      <div class="fields three">
         <div class="fld2">
           <label for="nm">이름</label>
           <input type="text" id="nm" maxlength="20" placeholder="홍길동" value="${esc(A.name || '')}">
@@ -1079,6 +1081,10 @@ function resultHtml() {
         <div class="fld2">
           <label for="ct">연락처</label>
           <input type="tel" id="ct" maxlength="20" inputmode="numeric" placeholder="010-0000-0000" value="${esc(A.contact || '')}">
+        </div>
+        <div class="fld2">
+          <label for="mt">상담 멘토</label>
+          <input type="text" id="mt" maxlength="20" placeholder="멘토명" value="${esc(A.mentorName || '')}">
         </div>
       </div>
     </div>
@@ -1112,6 +1118,8 @@ function wireResult() {
       renderPrint();
     };
   }
+  const mt = document.getElementById('mt');
+  if (mt) mt.oninput = e => { A.mentorName = e.target.value; renderPrint(); };
   const btn = document.getElementById('saveBtn');
   if (btn) btn.onclick = saveCheck;
 }
@@ -1140,7 +1148,8 @@ function renderPrint() {
     <div class="ph">SBS Academy AIX · Hongdae</div>
     <h1>국민취업지원제도 Ⅰ유형 선발형 자가진단</h1>
     <div class="meta">${esc(A.name) || '이름 ________'}${A.contact ? ' · ' + esc(A.contact) : ''} ·
-      ${r.youth ? '청년특례' : '비경활'} 기준 · ${new Date().toLocaleDateString('ko-KR')}</div>
+      ${r.youth ? '청년특례' : '비경활'} 기준${(A.mentorName || '').trim() ? ' · 담당 ' + esc(A.mentorName.trim()) : ''} ·
+      ${new Date().toLocaleDateString('ko-KR')}</div>
     <table>
       <thead><tr><th style="width:34%;">항목</th><th>내용</th><th class="r" style="width:14%;">점수</th></tr></thead>
       <tbody>
@@ -1172,6 +1181,7 @@ function saveCheck() {
     <dl class="cf-list">
       <div class="cf-row"><dt>이름</dt><dd>${esc(name)}</dd></div>
       <div class="cf-row"><dt>연락처</dt><dd>${esc(contact)}</dd></div>
+      ${(A.mentorName || '').trim() ? `<div class="cf-row"><dt>상담 멘토</dt><dd>${esc(A.mentorName.trim())}</dd></div>` : ''}
       <div class="cf-row"><dt>적용 기준</dt><dd>${r.youth ? '청년특례' : '비경활'}</dd></div>
       <div class="cf-row big"><dt>산정 점수</dt><dd>${r.total}점</dd></div>
       <div class="cf-row"><dt>진단 결과</dt><dd>${esc(v.head)}</dd></div>
@@ -1197,6 +1207,8 @@ async function submitCheck() {
   const rec = {
     id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
     name, contact, track: r.youth ? '청년특례' : '비경활',
+    mentorName: (A.mentorName || '').trim(),
+    status: 'pending',
     household: A.household || null,
     incomeBand: r.incomeOpt ? r.incomeOpt.note : '',
     assetBand: r.assetOpt ? r.assetOpt.lab : '',
